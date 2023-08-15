@@ -47,6 +47,7 @@ func (ic *IntergalacticConverter) ConvertToCredits(unitStr string, material stri
 	for _, unit := range units {
 		roman += ic.unitToRoman[unit]
 	}
+
 	if credits, ok := ic.materials[material]; ok {
 		return float32(ic.convertRomanToArabic(roman)) * float32(credits), nil
 	}
@@ -140,14 +141,18 @@ func main() {
 			// how much is ...
 			intergalacticUnit := strings.Join(parts[3:], " ")
 			intergalacticUnit = strings.TrimRight(intergalacticUnit, " ?")
+
 			romanNumber := converter.ConvertToIntergalactic(intergalacticUnit)
 			arabicNumber := converter.convertRomanToArabic(romanNumber)
+
 			fmt.Printf("%s is %d\n", intergalacticUnit, arabicNumber)
 		} else if parts[0] == "how" && parts[1] == "many" {
 			// how many Credits is ...
 			intergalacticUnit := strings.Join(parts[4:len(parts)-2], " ")
 			material := parts[len(parts)-2]
+
 			credits, err := converter.ConvertToCredits(intergalacticUnit, material)
+
 			if err != nil {
 				fmt.Printf("Error: %s\n", err)
 			} else {
@@ -155,18 +160,68 @@ func main() {
 			}
 		} else if parts[0] == "Does" && strings.Contains(input, "has more Credits") || strings.Contains(input, "have more Credits") || strings.Contains(input, "has less Credits") || strings.Contains(input, "have less Credits") {
 			// Does ... have more/less Credits than ...
-			firstUnit := strings.Join(parts[1:3], " ")
-			secondUnit := strings.Join(parts[6:8], " ")
-			material := strings.Join(parts[8:], " ")
-			creditsFirst, _ := converter.ConvertToCredits(firstUnit, material)
-			creditsSecond, _ := converter.ConvertToCredits(secondUnit, material)
-			if strings.Contains(input, "more Credits") && creditsFirst > creditsSecond {
+			// Find the index of the word "has" or "have"
+			hasIndex := -1
+			for i := 0; i < len(parts); i++ {
+				if parts[i] == "has" || parts[i] == "have" {
+					hasIndex = i
+					break
+				}
+			}
+
+			firstUnit := strings.Join(parts[1:hasIndex], " ")
+
+			// Find the index for the word "Credits"
+			creditsIndex := -1
+			for i := 0; i < len(parts); i++ {
+				if parts[i] == "Credits" {
+					creditsIndex = i
+					break
+				}
+			}
+
+			secondUnit := strings.Join(parts[creditsIndex+1:], " ")
+			secondUnit = strings.TrimRight(secondUnit, " ?")
+
+			materialFirst := parts[hasIndex-1]
+			materialSecond := parts[len(parts)-2]
+
+			creditsFirst, _ := converter.ConvertToCredits(firstUnit, materialFirst)
+			creditsSecond, _ := converter.ConvertToCredits(secondUnit, materialSecond)
+
+			if (strings.Contains(input, "has more Credits") || strings.Contains(input, "have more Credits")) && creditsFirst > creditsSecond {
 				fmt.Printf("%s has more Credits than %s\n", firstUnit, secondUnit)
-			} else if strings.Contains(input, "less Credits") && creditsFirst < creditsSecond {
+			} else if (strings.Contains(input, "has less Credits") || strings.Contains(input, "have less Credits")) && creditsFirst < creditsSecond {
 				fmt.Printf("%s has less Credits than %s\n", firstUnit, secondUnit)
 			} else {
 				fmt.Printf("%s has equal Credits as %s\n", firstUnit, secondUnit)
 			}
+		} else if parts[0] == "Is" && (strings.Contains(input, "larger than") || strings.Contains(input, "smaller than")) {
+			// Is ... larger/smaller than ...
+			// Find the index for the word "than"
+			thanIndex := -1
+			for i := 0; i < len(parts); i++ {
+				if parts[i] == "than" {
+					thanIndex = i
+					break
+				}
+			}
+
+			firstUnit := strings.Join(parts[1:thanIndex-1], " ")
+			secondUnit := strings.Join(parts[thanIndex+1:len(parts)-1], " ")
+
+			creditsFirst := converter.ConvertToIntergalactic(firstUnit)
+			creditsSecond := converter.ConvertToIntergalactic(secondUnit)
+
+			var comparison string
+			if creditsFirst > creditsSecond {
+				comparison = "larger than"
+			} else if creditsFirst < creditsSecond {
+				comparison = "smaller than"
+			} else {
+				comparison = "equal to"
+			}
+			fmt.Printf("%s is %s %s\n", firstUnit, comparison, secondUnit)
 		} else {
 			fmt.Println("I have no idea what you are talking about")
 		}
