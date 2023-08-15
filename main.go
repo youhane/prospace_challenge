@@ -4,91 +4,12 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"prospace_challenge/helpers"
+	"prospace_challenge/repository"
 	"strings"
 )
 
-type IntergalacticConverter struct {
-	unitToRoman map[string]string
-	materials   map[string]int
-}
-
-func NewIntergalacticConverter() *IntergalacticConverter {
-	return &IntergalacticConverter{
-		unitToRoman: make(map[string]string),
-		materials:   make(map[string]int),
-	}
-}
-
-func (ic *IntergalacticConverter) DefineUnit(unit, roman string) {
-	ic.unitToRoman[unit] = roman
-}
-
-func (ic *IntergalacticConverter) DefineMaterial(units []string, material string, credits int) {
-	roman := ""
-	for _, unit := range units {
-		roman += ic.unitToRoman[unit]
-	}
-
-	ic.materials[material] = credits / ic.convertRomanToArabic(roman)
-}
-
-func (ic *IntergalacticConverter) ConvertToIntergalactic(inputStr string) string {
-	units := strings.Split(inputStr, " ")
-	roman := ""
-	for _, unit := range units {
-		roman += ic.unitToRoman[unit]
-	}
-	return roman
-}
-
-func (ic *IntergalacticConverter) ConvertToCredits(unitStr string, material string) (float32, error) {
-	units := strings.Split(unitStr, " ")
-	roman := ""
-	for _, unit := range units {
-		roman += ic.unitToRoman[unit]
-	}
-
-	if credits, ok := ic.materials[material]; ok {
-		return float32(ic.convertRomanToArabic(roman)) * float32(credits), nil
-	}
-	return 0, fmt.Errorf("material not found")
-}
-
-func (ic *IntergalacticConverter) convertRomanToArabic(roman string) int {
-	romanToArabic := map[string]int{
-		"I": 1,
-		"V": 5,
-		"X": 10,
-		"L": 50,
-		"C": 100,
-		"D": 500,
-		"M": 1000,
-	}
-
-	arabic := 0
-	prevValue := 0
-
-	for i := len(roman) - 1; i >= 0; i-- {
-		symbol := string(roman[i])
-		value := romanToArabic[symbol]
-
-		if value >= prevValue {
-			arabic += value
-		} else {
-			arabic -= value
-		}
-
-		prevValue = value
-	}
-
-	return arabic
-}
-
-func main() {
-	converter := NewIntergalacticConverter()
-
-	scanner := bufio.NewScanner(os.Stdin)
-
+func UnitDefinitions(scanner *bufio.Scanner, converter *repository.IntergalacticConverter) {
 	fmt.Println("Enter unit definitions (one per line, blank line to stop):")
 	for scanner.Scan() {
 		input := scanner.Text()
@@ -102,7 +23,9 @@ func main() {
 		}
 		converter.DefineUnit(parts[0], parts[2])
 	}
+}
 
+func CreditDefinitions(scanner *bufio.Scanner, converter *repository.IntergalacticConverter) {
 	fmt.Println("Enter credit definitions (one per line, blank line to stop):")
 	for scanner.Scan() {
 		input := scanner.Text()
@@ -128,7 +51,9 @@ func main() {
 		fmt.Sscanf(parts[len(parts)-2], "%d", &credits)
 		converter.DefineMaterial(unitStr, material, credits)
 	}
+}
 
+func Questions(scanner *bufio.Scanner, converter *repository.IntergalacticConverter) {
 	fmt.Println("Enter questions (one per line, blank line to stop):")
 	for scanner.Scan() {
 		input := scanner.Text()
@@ -143,7 +68,7 @@ func main() {
 			intergalacticUnit = strings.TrimRight(intergalacticUnit, " ?")
 
 			romanNumber := converter.ConvertToIntergalactic(intergalacticUnit)
-			arabicNumber := converter.convertRomanToArabic(romanNumber)
+			arabicNumber := converter.ConvertRomanToArabic(romanNumber)
 
 			fmt.Printf("%s is %d\n", intergalacticUnit, arabicNumber)
 		} else if parts[0] == "how" && parts[1] == "many" {
@@ -159,27 +84,10 @@ func main() {
 				fmt.Printf("%s %s is %.2f Credits\n", intergalacticUnit, material, credits)
 			}
 		} else if parts[0] == "Does" && strings.Contains(input, "has more Credits") || strings.Contains(input, "have more Credits") || strings.Contains(input, "has less Credits") || strings.Contains(input, "have less Credits") {
-			// Does ... have more/less Credits than ...
-			// Find the index of the word "has" or "have"
-			hasIndex := -1
-			for i := 0; i < len(parts); i++ {
-				if parts[i] == "has" || parts[i] == "have" {
-					hasIndex = i
-					break
-				}
-			}
-
+			hasIndex := helpers.IndexOf(parts, "has")
 			firstUnit := strings.Join(parts[1:hasIndex], " ")
 
-			// Find the index for the word "Credits"
-			creditsIndex := -1
-			for i := 0; i < len(parts); i++ {
-				if parts[i] == "Credits" {
-					creditsIndex = i
-					break
-				}
-			}
-
+			creditsIndex := helpers.IndexOf(parts, "Credits")
 			secondUnit := strings.Join(parts[creditsIndex+1:], " ")
 			secondUnit = strings.TrimRight(secondUnit, " ?")
 
@@ -198,14 +106,7 @@ func main() {
 			}
 		} else if parts[0] == "Is" && (strings.Contains(input, "larger than") || strings.Contains(input, "smaller than")) {
 			// Is ... larger/smaller than ...
-			// Find the index for the word "than"
-			thanIndex := -1
-			for i := 0; i < len(parts); i++ {
-				if parts[i] == "than" {
-					thanIndex = i
-					break
-				}
-			}
+			thanIndex := helpers.IndexOf(parts, "than")
 
 			firstUnit := strings.Join(parts[1:thanIndex-1], " ")
 			secondUnit := strings.Join(parts[thanIndex+1:len(parts)-1], " ")
@@ -226,6 +127,15 @@ func main() {
 			fmt.Println("I have no idea what you are talking about")
 		}
 	}
+}
+
+func main() {
+	converter := repository.NewIntergalacticConverter()
+	scanner := bufio.NewScanner(os.Stdin)
+
+	UnitDefinitions(scanner, converter)
+	CreditDefinitions(scanner, converter)
+	Questions(scanner, converter)
 
 	if err := scanner.Err(); err != nil {
 		fmt.Fprintln(os.Stderr, "Error reading input:", err)
