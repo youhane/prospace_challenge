@@ -30,8 +30,22 @@ func (ic *IntergalacticConverter) ConvertToIntergalactic(inputStr string) string
 func (ic *IntergalacticConverter) ConvertToCredits(unitStr string, material string) (float32, error) {
 	units := strings.Split(unitStr, " ")
 	roman := ""
+	prevUnit := ""
+	repeatCount := 1
+	repeatUnits := map[string]bool{"I": true, "X": true, "C": true, "M": true}
+
 	for _, unit := range units {
+		if unit == prevUnit {
+			repeatCount++
+			if repeatCount > 3 && repeatUnits[ic.unitToRoman[unit]] {
+				return 0, fmt.Errorf("requested number is in invalid format")
+			}
+		} else {
+			repeatCount = 1
+		}
+
 		roman += ic.unitToRoman[unit]
+		prevUnit = unit
 	}
 
 	if credits, ok := ic.materials[material]; ok {

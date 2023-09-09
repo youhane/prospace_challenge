@@ -94,13 +94,14 @@ func TestConvertToCredits(t *testing.T) {
 		{"pish pish", "Gold", 28900},
 		{"glob prok", "Gold", 5750},
 		{"tegj pish", "Silver", 0},
-		{"pish pish", "Platinum", 0}, // Material not found
+		{"glob glob glob glob", "Silver", 0}, // Invalid input
+		{"pish pish", "Platinum", 0},         // Material not found
 	}
 
 	for _, test := range tests {
 		result, err := converter.ConvertToCredits(test.unitStr, test.material)
 		if err != nil {
-			if err.Error() != "material not found" {
+			if err.Error() != "material not found" && err.Error() != "requested number is in invalid format" {
 				t.Errorf("Unexpected error: %v", err)
 			}
 		} else {
