@@ -79,9 +79,9 @@ func Questions(scanner *bufio.Scanner, converter *repository.IntergalacticConver
 			credits, err := converter.ConvertToCredits(intergalacticUnit, material)
 
 			if err != nil {
-				fmt.Printf("Error: %s\n", err)
+				fmt.Printf("%s\n", err)
 			} else {
-				fmt.Printf("%s %s is %.2f Credits\n", intergalacticUnit, material, credits)
+				fmt.Printf("%s %s is %s Credits\n", intergalacticUnit, material, helpers.FormatCredits(credits))
 			}
 		} else if parts[0] == "Does" && strings.Contains(input, "has more Credits") || strings.Contains(input, "have more Credits") || strings.Contains(input, "has less Credits") || strings.Contains(input, "have less Credits") {
 			hasIndex := helpers.IndexOf(parts, "has")
